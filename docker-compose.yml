@@ -1,0 +1,42 @@
+version: '3.9'
+
+services:
+  backend:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    image: php8.2
+    container_name: app-backend
+    restart: unless-stopped
+    working_dir: /var/www/
+    volumes:
+      - ./src:/var/www
+      - ./data/env/app.env:/var/www/.env
+    networks:
+      - app-network
+
+  db:
+    image: mysql:8.2
+    restart: unless-stopped
+    env_file:
+      - ./data/env/db.env
+    volumes:
+      - ./data/db/mysql:/var/lib/mysql
+    networks:
+      - app-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: app-nginx
+    restart: unless-stopped
+    ports:
+      - 8000:80
+    volumes:
+      - ./src:/var/www
+      - ./data/conf.d/nginx:/etc/nginx/conf.d/
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
