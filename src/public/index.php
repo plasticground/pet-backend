@@ -15,10 +15,16 @@ switch ($url) {
 
 function abort(int $code = 404)
 {
-    response(null, $code);
+    $message = match ($code) {
+        404 => 'Not found',
+        500 => 'Server error',
+        default => null
+    };
+
+    response($message, $code);
 }
 
-function response(?array $data = null, int $code = 200)
+function response($data = null, int $code = 200)
 {
     http_response_code($code);
 
