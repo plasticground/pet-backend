@@ -11,7 +11,6 @@ services:
     working_dir: /var/www/
     volumes:
       - ./src:/var/www
-      - ./data/env/app.env:/var/www/.env
     networks:
       - app-network
 

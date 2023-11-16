@@ -4,31 +4,19 @@ namespace App\Models;
 
 use App\Traits\HasAttributes;
 
-class Pet
+class Pet extends Model
 {
     use HasAttributes;
 
-    private int $created_at;
-    
-    public function __construct(
-        private string $name,
-        private int $health = 100,
-        private int $happiness = 100,
-        private int $vivacity = 100,
-        private int $satiety = 100,
-        int|\DateTimeInterface|null $created_at = null
-    ) {
-        if ($created_at === null) {
-            $created_at = (new \DateTimeImmutable())->getTimestamp();
-        }
+    protected string $table = 'pets';
 
-        if ($created_at instanceof \DateTimeInterface) {
-            $created_at = $created_at->getTimestamp();
-        }
-
-        /** @var int $created_at */
-        $this->created_at = $created_at;
-
-        return $this;
-    }
+    protected array $fields = [
+        'name' => ['string'],
+        'health' => ['int', 100],
+        'happiness' => ['int', 100],
+        'vivacity' => ['int', 100],
+        'satiety' => ['int', 100],
+        'updated_at' => ['datetime'],
+        'created_at' => ['datetime']
+    ];
 }
