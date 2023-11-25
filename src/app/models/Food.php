@@ -4,25 +4,17 @@ namespace App\Models;
 
 use App\Traits\HasAttributes;
 
-/**
- * Class Food
- * @package App\Models
- */
-class Food
+class Food extends Model
 {
     use HasAttributes;
 
-    /**
-     * Food constructor.
-     * @param string $name
-     * @param int $power
-     * @param float $price
-     */
-    public function __construct(
-        private string $name,
-        private int $power,
-        private float $price
-    ) {
-        return $this;
-    }
+    protected string $table = 'users';
+
+    protected array $fields = [
+        'name' => ['string'],
+        'power' => ['int', 0],
+        'price' => ['int', 0],
+        'updated_at' => ['datetime'],
+        'created_at' => ['datetime']
+    ];
 }

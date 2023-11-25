@@ -46,6 +46,9 @@ class Model
         return $this->fields;
     }
 
+    /**
+     * @return array
+     */
     public function getAttributes(): array
     {
         $attributes = [];
@@ -59,7 +62,10 @@ class Model
         return $attributes;
     }
 
-    public function create()
+    /**
+     * @return array|bool
+     */
+    public function create(): bool|array
     {
         $errors = $this->validateFields();
 
@@ -70,10 +76,12 @@ class Model
         return $errors;
     }
 
-    public function update()
+    /**
+     * @return array|bool
+     */
+    public function update(): bool|array
     {
         if (property_exists($this, 'id')) {
-
             $errors = $this->validateFields();
 
             if (empty($errors)) {
@@ -140,11 +148,15 @@ class Model
         };
     }
 
-    public static function find(int $id)
+    /**
+     * @param int $id
+     * @return Model|null
+     */
+    public static function find(int $id): ?Model
     {
         $model = new static();
 
-        $attributes = (new DatabaseService())->select($model->getTable(), $id);
+        $attributes = (new DatabaseService())->select($model->getTable(), ['id' => $id], true);
 
         if ($attributes) {
             return $model->fill($attributes);
@@ -153,7 +165,29 @@ class Model
         return null;
     }
 
-    public function fill(array $attributes = [])
+    /**
+     * @param string $key
+     * @param $value
+     * @return Model|null
+     */
+    public static function findBy(string $key, $value): ?Model
+    {
+        $model = new static();
+
+        $attributes = (new DatabaseService())->select($model->getTable(), [$key => $value], true);
+
+        if ($attributes) {
+            return $model->fill($attributes);
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array $attributes
+     * @return $this
+     */
+    public function fill(array $attributes = []): static
     {
         $attributes = array_merge($this->getAttributes(), $attributes);
 
@@ -164,6 +198,10 @@ class Model
         return $this;
     }
 
+    /**
+     * Model constructor.
+     * @param array $attributes
+     */
     public function __construct(array $attributes = [])
     {
         return $this->fill($attributes);

@@ -1,44 +1,45 @@
 <?php
 
-require __DIR__.'/../app/interfaces/DatabaseInterface.php';
-require __DIR__.'/../app/services/DatabaseService.php';
-require __DIR__.'/../app/traits/HasAttributes.php';
-require __DIR__.'/../app/models/Model.php';
-require __DIR__.'/../app/models/Pet.php';
+use App\Helpers\DataHelper;
+
+spl_autoload_register(function ($class) {
+    $file = __DIR__
+        . DIRECTORY_SEPARATOR
+        . '..'
+        . DIRECTORY_SEPARATOR
+        . str_replace('\\', DIRECTORY_SEPARATOR, $class)
+        . '.php';
+
+    if (file_exists($file)) {
+        require $file;
+    }
+});
 
 header('Content-type: application/json; charset=utf-8');
 
 $url = parse_url($_SERVER['REQUEST_URI']);
 $path = trim($url['path'], '/');
+$query = empty($_GET) ? [] : array_map('trim', $_GET);
+$body = json_decode(file_get_contents('php://input') ?: '', true);
+$body = empty($body) ? [] : array_map('trim', $body);
+$data = new DataHelper([DataHelper::QUERY => $query, DataHelper::BODY => $body]);
 
-switch ($path) {
-    case 'ping':
-        response(['message' => 'Pong!']);
-        break;
-    case 'createTables':
-        createTables();
-        break;
-    case 'dropTables':
-        dropTables();
-        break;
-    case 'showTables':
-        showTables();
-        break;
-    case 'showTable':
-        showTable();
-        break;
-    case 'createPet':
-        createPet();
-        break;
-    case 'getPet':
-        getPet();
-        break;
-    case 'updatePet':
-        updatePet();
-        break;
-    default:
-        abort();
-        break;
+try {
+    switch ($path) {
+        case 'signUp':
+        case 'token':
+            function_exists($path) ? $path($data) : abort();
+            break;
+        case 'ping':
+            response(['message' => 'Pong!']);
+            break;
+        default:
+            abort();
+            break;
+    }
+} catch (\Throwable $exception) {
+    response($exception->getMessage(), 500);//TODO: DEV
+    abort(500);
 }
 
 function abort(int $code = 404)
@@ -64,7 +65,42 @@ function response($data = null, int $code = 200)
     exit(0);
 }
 
-function showTable() {
+function signUp(DataHelper $data)
+{
+    $username = $data->body('username');
+    $password = $data->body('password');
+
+    $errors = \App\Models\User::validateSignUp($username, $password);
+
+    if (!empty($errors)) {
+        response(compact('errors'), 422);
+    }
+
+    try {
+        $token = \App\Models\User::signUp($username, $password);
+
+        response(compact('token'));
+    } catch (\App\Exceptions\UserException $exception) {
+        response(['errors' => ['request' => $exception->getMessage()]], $exception->getCode());
+    }
+}
+
+function token(DataHelper $data)
+{
+    $username = $data->body('username');
+    $password = $data->body('password');
+
+    try {
+        $token = \App\Models\User::token($username, $password);
+
+        response(compact('token'));
+    } catch (\App\Exceptions\UserException $exception) {
+        response(['errors' => ['request' => $exception->getMessage()]], $exception->getCode());
+    }
+}
+
+function showTable()
+{
     $table = $_GET['table'] ?? null;
 
     if ($table) {
@@ -76,25 +112,29 @@ function showTable() {
     }
 }
 
-function showTables() {
+function showTables()
+{
     $db = new \App\Services\DatabaseService();
 
     response($db->showTables());
 }
 
-function createTables() {
+function createTables()
+{
     $db = new \App\Services\DatabaseService();
 
     response($db->createTables());
 }
 
-function dropTables() {
+function dropTables()
+{
     $db = new \App\Services\DatabaseService();
 
     response($db->dropTables());
 }
 
-function createPet() {
+function createPet()
+{
     $name = $_GET['name'] ?? null;
 
     if ($name) {
@@ -106,7 +146,8 @@ function createPet() {
     }
 }
 
-function getPet() {
+function getPet()
+{
     $id = $_GET['id'] ?? null;
 
     if ($id) {
@@ -116,7 +157,8 @@ function getPet() {
     }
 }
 
-function updatePet() {
+function updatePet()
+{
     $id = $_GET['id'] ?? null;
     $attributes = $_GET ?? null;
 

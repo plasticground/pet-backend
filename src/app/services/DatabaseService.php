@@ -18,7 +18,7 @@ class DatabaseService implements DatabaseInterface
         $this->db = new \PDO($this->dsn, $this->user, $this->password);
     }
 
-    public function select($table, ?int $id = null)
+    public function select($table, array $where = [], bool $first = false)
     {
         $table = match ($table) {
             'users', 'pets', 'users_pets', 'foods'  => $table,
@@ -31,14 +31,20 @@ class DatabaseService implements DatabaseInterface
 
         $sql = "SELECT * FROM {$table}";
 
-        if ($id) {
-            $sql .= " WHERE id=?";
+        if ($where) {
+            foreach (array_keys($where) as $key) {
+                $sql .= " WHERE {$key}=?";
+
+                if (array_key_last($where) !== $key) {
+                    $sql .= " AND";
+                }
+            }
         }
 
         $sth = $this->db->prepare($sql);
-        $sth->execute($id ? [$id] : null);
+        $sth->execute(array_values($where));
 
-        return $id ? $sth->fetch(\PDO::FETCH_ASSOC) : $sth->fetchAll(\PDO::FETCH_ASSOC);
+        return $first ? $sth->fetch(\PDO::FETCH_ASSOC) : $sth->fetchAll(\PDO::FETCH_ASSOC);
     }
 
     /**
