@@ -26,11 +26,25 @@ $body = json_decode(file_get_contents('php://input') ?: '', true);
 $body = empty($body) ? [] : array_map('trim', $body);
 $data = new DataHelper([DataHelper::QUERY => $query, DataHelper::BODY => $body]);
 
+$httpAuthorization = $_SERVER['HTTP_AUTHORIZATION'] ?? null;
+
+if ($httpAuthorization) {
+    $httpAuthorization = strtolower($httpAuthorization);
+
+    if (str_contains($httpAuthorization, 'bearer')) {
+        $token = trim(str_replace('bearer', '', $httpAuthorization));
+
+        if ($user = \App\Models\User::findBy('token', $token)) {
+            $data->set(DataHelper::USER, 0, $user);
+        }
+    }
+}
+
 if (!array_key_exists('last_request', $_SESSION)) {
     $_SESSION['last_request'] = time();
 } else {
     $lastRequestTimeout = time() - $_SESSION['last_request'];
-    $requestDelayTimeout = 5;
+    $requestDelayTimeout = 3;
 
     if ($lastRequestTimeout < $requestDelayTimeout) {
         abort(429);
@@ -63,6 +77,11 @@ try {
                 case 'ping':
                     response(['message' => 'Pong!']);
                     break;
+                case 'pets':
+                    function_exists($path)
+                        ? ($data->user() instanceof \App\Models\User ? $path($data) : abort(403))
+                        : abort();
+                    break;
                 default:
                     abort();
                     break;
@@ -81,6 +100,7 @@ try {
 function abort(int $code = 404)
 {
     $message = match ($code) {
+        403 => 'Forbidden',
         404 => 'Not Found',
         405 => 'Method Not Allowed',
         422 => 'Wrong Data',
@@ -135,6 +155,10 @@ function token(DataHelper $data)
     } catch (\App\Exceptions\UserException $exception) {
         response(['errors' => ['request' => $exception->getMessage()]], $exception->getCode());
     }
+}
+
+function pets(DataHelper $data) {
+    response('ok');
 }
 
 function showTable()

@@ -5,7 +5,7 @@ namespace App\Helpers;
 
 class DataHelper
 {
-    const QUERY = 'query', BODY = 'body';
+    const QUERY = 'query', BODY = 'body', USER = 'user';
 
     public function __construct(protected array $data = [])
     {
@@ -61,5 +61,10 @@ class DataHelper
         }
 
         return $newData;
+    }
+
+    public function user()
+    {
+        return $this->{self::USER}[0] ?? null;
     }
 }
