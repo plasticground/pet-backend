@@ -65,7 +65,7 @@ class Model
     /**
      * @return array|bool
      */
-    public function create(): bool|array
+    public function create(): int|array
     {
         $errors = $this->validateFields();
 
@@ -205,5 +205,11 @@ class Model
     public function __construct(array $attributes = [])
     {
         return $this->fill($attributes);
+    }
+
+    public function asArray(): array
+    {
+        // return only available fields
+        return (array)$this;
     }
 }

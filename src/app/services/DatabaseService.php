@@ -50,9 +50,9 @@ class DatabaseService implements DatabaseInterface
     /**
      * @param $table
      * @param array $data
-     * @return bool
+     * @return int|bool
      */
-    public function insert($table, array $data): bool
+    public function insert($table, array $data): int|bool
     {
         $data = array_filter($data, fn($field) => $field !== null);
         $fields = array_keys($data);
@@ -65,7 +65,11 @@ class DatabaseService implements DatabaseInterface
             . rtrim(str_repeat('?,', $count), ',')
             . ")";
 
-        return $this->db->prepare($sql)->execute($values);
+        $this->db->prepare($sql)->execute($values);
+
+        $idOrFalse = $this->db->lastInsertId();
+
+        return is_string($idOrFalse) ? (int)$idOrFalse : $idOrFalse;
     }
 
     /**

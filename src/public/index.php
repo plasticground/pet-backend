@@ -23,7 +23,7 @@ $url = parse_url($_SERVER['REQUEST_URI']);
 $path = trim($url['path'], '/');
 $query = empty($_GET) ? [] : array_map('trim', $_GET);
 $body = json_decode(file_get_contents('php://input') ?: '', true);
-$body = empty($body) ? [] : array_map('trim', $body);
+$body = empty($body) ? [] : array_map(fn($field) => is_string($field) ? trim($field) : $field, $body);
 $data = new DataHelper([DataHelper::QUERY => $query, DataHelper::BODY => $body]);
 
 $httpAuthorization = $_SERVER['HTTP_AUTHORIZATION'] ?? null;
@@ -53,10 +53,9 @@ if (!array_key_exists('last_request', $_SESSION)) {
     }
 }
 
-//TODO: check token for pet and others requests
 //TODO: make pets
 //TODO: make foods
-//TODO: being happy
+//TODO: logging
 
 try {
     switch ($_SERVER['REQUEST_METHOD']) {
@@ -64,7 +63,12 @@ try {
             switch ($path) {
                 case 'signUp':
                 case 'token':
-                    function_exists($path) ? $path($data) : abort();
+                    function_exists($path) ? $path($data, 'POST') : abort();
+                    break;
+                case 'pets':
+                    function_exists($path)
+                        ? ($data->user() instanceof \App\Models\User ? $path($data, 'POST') : abort(403))
+                        : abort();
                     break;
                 default:
                     abort();
@@ -79,7 +83,7 @@ try {
                     break;
                 case 'pets':
                     function_exists($path)
-                        ? ($data->user() instanceof \App\Models\User ? $path($data) : abort(403))
+                        ? ($data->user() instanceof \App\Models\User ? $path($data, 'GET') : abort(403))
                         : abort();
                     break;
                 default:
@@ -123,7 +127,7 @@ function response($data = null, int $code = 200)
     exit(0);
 }
 
-function signUp(DataHelper $data)
+function signUp(DataHelper $data, $method)
 {
     $username = $data->body('username');
     $password = $data->body('password');
@@ -143,7 +147,7 @@ function signUp(DataHelper $data)
     }
 }
 
-function token(DataHelper $data)
+function token(DataHelper $data, $method)
 {
     $username = $data->body('username');
     $password = $data->body('password');
@@ -157,9 +161,46 @@ function token(DataHelper $data)
     }
 }
 
-function pets(DataHelper $data) {
-    response('ok');
+function pets(DataHelper $data, $method) {
+    // Get all pets
+    if ($method === 'GET') {
+        $pets = \App\Models\Pet::findByUser($data->user()->id);
+
+        response(compact('pets'));
+    }
+
+    // Create new pet
+    if ($method === 'POST') {
+        $name = $data->body('name');
+
+        $errors = \App\Models\Pet::validateCreation($name);
+
+        if (!empty($errors)) {
+            response(compact('errors'), 422);
+        }
+
+        try {
+            $pet = new \App\Models\Pet(['name' => $name]);
+
+            $petId = $pet->create();
+
+            if (is_int($petId)) {
+                $pet = \App\Models\Pet::find($petId);
+
+                if ($pet && \App\Models\Pet::createPair($pet->id, $data->user()->id)) {
+                    response(['pet' => $pet->asArray()]);
+                }
+            }
+
+            abort(500);
+        } catch (\App\Exceptions\PetException $exception) {
+            response(['errors' => ['request' => $exception->getMessage()]], $exception->getCode());
+        }
+    }
 }
+
+
+//----- DEV -----//
 
 function showTable()
 {
@@ -193,45 +234,4 @@ function dropTables()
     $db = new \App\Services\DatabaseService();
 
     response($db->dropTables());
-}
-
-function createPet()
-{
-    $name = $_GET['name'] ?? null;
-
-    if ($name) {
-        $pet = new \App\Models\Pet(['name' => $name]);
-
-        response($pet->create());
-    } else {
-        abort(422);
-    }
-}
-
-function getPet()
-{
-    $id = $_GET['id'] ?? null;
-
-    if ($id) {
-        response(\App\Models\Pet::find($id));
-    } else {
-        abort(404);
-    }
-}
-
-function updatePet()
-{
-    $id = $_GET['id'] ?? null;
-    $attributes = $_GET ?? null;
-
-    if ($id && $attributes) {
-        unset($attributes['id']);
-
-        $pet = \App\Models\Pet::find($id);
-        $pet->fill($attributes);
-
-        response($pet->update());
-    } else {
-        abort(422);
-    }
 }

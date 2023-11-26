@@ -36,7 +36,7 @@ class User extends Model
 
         $user = new self($attributes);
 
-        if ($user->create()) {
+        if (is_int($user->create())) {
             return $user->token;
         }
 
@@ -58,7 +58,7 @@ class User extends Model
         throw new UserException('Wrong password', 403);
     }
 
-    public static function validateSignUp(string $username, string $password): array
+    public static function validateSignUp($username, $password): array
     {
         return array_filter([
             'username' => self::validateUsername($username),
@@ -66,9 +66,16 @@ class User extends Model
         ]);
     }
 
-    public static function validateUsername(string $username)
+    public static function validateUsername($username)
     {
         $errors = [];
+
+        if (empty($username)) {
+            $errors['required'] = 'Field is required';
+
+            return $errors;
+        }
+
         $length = strlen($username);
 
         if ($length < 2) {
@@ -77,16 +84,23 @@ class User extends Model
             $errors['length'] = 'Max length 32 symbols';
         }
 
-        if (preg_match('/^\w+$/', $username) === false) {
+        if (!preg_match('/^\w+$/', $username)) {
             $errors['format'] = 'Available only letters, digits and _ symbol';
         }
 
         return $errors;
     }
 
-    public static function validatePassword(string $password)
+    public static function validatePassword($password)
     {
         $errors = [];
+
+        if (empty($password)) {
+            $errors['required'] = 'Field is required';
+
+            return $errors;
+        }
+
         $length = strlen($password);
 
         if ($length < 6) {
