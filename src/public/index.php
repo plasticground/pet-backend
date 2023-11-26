@@ -2,6 +2,8 @@
 
 use App\Helpers\DataHelper;
 
+session_start();
+
 spl_autoload_register(function ($class) {
     $file = __DIR__
         . DIRECTORY_SEPARATOR
@@ -23,6 +25,25 @@ $query = empty($_GET) ? [] : array_map('trim', $_GET);
 $body = json_decode(file_get_contents('php://input') ?: '', true);
 $body = empty($body) ? [] : array_map('trim', $body);
 $data = new DataHelper([DataHelper::QUERY => $query, DataHelper::BODY => $body]);
+
+if (!array_key_exists('last_request', $_SESSION)) {
+    $_SESSION['last_request'] = time();
+} else {
+    $lastRequestTimeout = time() - $_SESSION['last_request'];
+    $requestDelayTimeout = 5;
+
+    if ($lastRequestTimeout < $requestDelayTimeout) {
+        abort(429);
+    } else {
+        $_SESSION['last_request'] = time();
+    }
+}
+
+//TODO: check request method
+//TODO: check token for pet and others requests
+//TODO: make pets
+//TODO: make foods
+//TODO: being happy
 
 try {
     switch ($path) {
@@ -47,6 +68,7 @@ function abort(int $code = 404)
     $message = match ($code) {
         404 => 'Not found',
         422 => 'Wrong data',
+        429 => 'Too many requests',
         500 => 'Server error',
         default => null
     };
