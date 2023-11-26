@@ -28,9 +28,18 @@ class Pet extends Model
 
         if ($usersPets) {
             $ids = array_map(fn($pair) => $pair['pet_id'], $usersPets);
-            $pets = self::findAllWhereIn('id', $ids);
 
-            return array_map(fn(self $pet) => $pet->asArray(), $pets);
+            $pets = self::findAllWhereIn('id', $ids);
+            $pets = array_map(fn(self $pet) => $pet->asArray(), $pets);
+
+            if ($petName) {
+                $petName = strtolower($petName);
+                $pets = array_filter($pets, fn($pet) => strtolower($pet['name']) === $petName);
+
+                return $pets[array_key_first($pets)] ?? null;
+            }
+
+            return $pets;
         }
 
         return [];

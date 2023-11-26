@@ -20,11 +20,13 @@ spl_autoload_register(function ($class) {
 header('Content-type: application/json; charset=utf-8');
 
 $url = parse_url($_SERVER['REQUEST_URI']);
-$path = trim($url['path'], '/');
+$path = explode('/', trim($url['path'], '/'));
+[$path, $model] = [$path[0], $path[1] ?? null];
+
 $query = empty($_GET) ? [] : array_map('trim', $_GET);
 $body = json_decode(file_get_contents('php://input') ?: '', true);
 $body = empty($body) ? [] : array_map(fn($field) => is_string($field) ? trim($field) : $field, $body);
-$data = new DataHelper([DataHelper::QUERY => $query, DataHelper::BODY => $body]);
+$data = new DataHelper([DataHelper::QUERY => $query, DataHelper::BODY => $body, DataHelper::MODEL => $model]);
 
 $httpAuthorization = $_SERVER['HTTP_AUTHORIZATION'] ?? null;
 
@@ -161,12 +163,19 @@ function token(DataHelper $data, $method)
     }
 }
 
-function pets(DataHelper $data, $method) {
-    // Get all pets
+function pets(DataHelper $data, $method)
+{
     if ($method === 'GET') {
-        $pets = \App\Models\Pet::findByUser($data->user()->id);
+        if ($data->model()) {
+            $pet = \App\Models\Pet::findByUser($data->user()->id, $data->model());
 
-        response(compact('pets'));
+            response(compact('pet'));
+        } else {
+            // Get all pets
+            $pets = \App\Models\Pet::findByUser($data->user()->id);
+
+            response(compact('pets'));
+        }
     }
 
     // Create new pet
