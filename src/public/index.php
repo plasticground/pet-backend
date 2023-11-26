@@ -39,23 +39,38 @@ if (!array_key_exists('last_request', $_SESSION)) {
     }
 }
 
-//TODO: check request method
 //TODO: check token for pet and others requests
 //TODO: make pets
 //TODO: make foods
 //TODO: being happy
 
 try {
-    switch ($path) {
-        case 'signUp':
-        case 'token':
-            function_exists($path) ? $path($data) : abort();
+    switch ($_SERVER['REQUEST_METHOD']) {
+        case 'POST':
+            switch ($path) {
+                case 'signUp':
+                case 'token':
+                    function_exists($path) ? $path($data) : abort();
+                    break;
+                default:
+                    abort();
+                    break;
+            }
             break;
-        case 'ping':
-            response(['message' => 'Pong!']);
+
+        case 'GET':
+            switch ($path) {
+                case 'ping':
+                    response(['message' => 'Pong!']);
+                    break;
+                default:
+                    abort();
+                    break;
+            }
             break;
+
         default:
-            abort();
+            abort(405);
             break;
     }
 } catch (\Throwable $exception) {
@@ -66,10 +81,11 @@ try {
 function abort(int $code = 404)
 {
     $message = match ($code) {
-        404 => 'Not found',
-        422 => 'Wrong data',
-        429 => 'Too many requests',
-        500 => 'Server error',
+        404 => 'Not Found',
+        405 => 'Method Not Allowed',
+        422 => 'Wrong Data',
+        429 => 'Too Many Requests',
+        500 => 'Server Error',
         default => null
     };
 
