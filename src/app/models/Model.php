@@ -184,6 +184,29 @@ class Model
     }
 
     /**
+     * @param string $key
+     * @param array $values
+     * @return array|null
+     */
+    public static function findAllWhereIn(string $key, array $values): ?array
+    {
+        $model = new static();
+        $models = [];
+
+        $attributesCollection = (new DatabaseService())->select($model->getTable(), ['_in' => ['field' => $key, 'values' => $values]]);
+
+        if ($attributesCollection) {
+            foreach ($attributesCollection as $attributes) {
+                $models[] = new static($attributes);
+            }
+
+            return $models;
+        }
+
+        return null;
+    }
+
+    /**
      * @param array $attributes
      * @return $this
      */

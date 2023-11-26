@@ -28,17 +28,9 @@ class Pet extends Model
 
         if ($usersPets) {
             $ids = array_map(fn($pair) => $pair['pet_id'], $usersPets);
-            $pets = [];
+            $pets = self::findAllWhereIn('id', $ids);
 
-            foreach ($ids as $id) {
-                $pet = self::find($id); // TODO: where IN sql query
-
-                if ($pet) {
-                    $pets[] = $pet->asArray();
-                }
-            }
-
-            return $pets;
+            return array_map(fn(self $pet) => $pet->asArray(), $pets);
         }
 
         return [];

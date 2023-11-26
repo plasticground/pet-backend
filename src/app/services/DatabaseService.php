@@ -30,19 +30,27 @@ class DatabaseService implements DatabaseInterface
         }
 
         $sql = "SELECT * FROM {$table}";
+        $whereValues = null;
 
         if ($where) {
-            foreach (array_keys($where) as $key) {
-                $sql .= " WHERE {$key}=?";
+            if (array_key_exists('_in', $where)) {
+                $sql .= " WHERE {$where['_in']['field']} IN (" . rtrim(str_repeat('?,' , count($where['_in']['values'])), ',') . ")";
+                $whereValues = $where['_in']['values'];
+            } else {
+                foreach (array_keys($where) as $key) {
+                    $sql .= " WHERE {$key}=?";
 
-                if (array_key_last($where) !== $key) {
-                    $sql .= " AND";
+                    if (array_key_last($where) !== $key) {
+                        $sql .= " AND";
+                    }
                 }
+
+                $whereValues = array_values($where);
             }
         }
 
         $sth = $this->db->prepare($sql);
-        $sth->execute(array_values($where));
+        $sth->execute($whereValues);
 
         return $first ? $sth->fetch(\PDO::FETCH_ASSOC) : $sth->fetchAll(\PDO::FETCH_ASSOC);
     }
